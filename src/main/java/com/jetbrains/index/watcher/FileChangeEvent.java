@@ -1,8 +1,8 @@
 package com.jetbrains.index.watcher;
 
-import java.time.LocalDateTime;
+import java.io.FileInputStream;
 
 public interface FileChangeEvent {
-    byte[] content();
+    String filePath();
     ChangeType change();
 }

@@ -12,13 +12,12 @@ public class FileSystemWatcher implements AutoCloseable{
     private final List<String> paths;
     private final WatcherTask watcherTask;
     private Thread watcherThread;
-    private List<FSListener> listeners = new ArrayList<>();
+    private final List<FSListener> listeners = new ArrayList<>();
 
     public FileSystemWatcher(List<String> paths) {
         this.paths = paths;
         this.watcherTask = new WatcherTask(paths);
     }
-
 
     public void start(){
         log.info("Starting watcher");
@@ -34,5 +33,8 @@ public class FileSystemWatcher implements AutoCloseable{
 
     public void registerListener(FSListener listener) {
         listeners.add(listener);
+    }
+
+    private void iterateListeners(){
     }
 }

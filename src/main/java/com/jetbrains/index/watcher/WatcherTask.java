@@ -11,24 +11,32 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.StructuredTaskScope;
 import java.util.function.Consumer;
 
+/**
+ * Task responsible for reacting to file system changes.
+ * Given a set of paths, this task will produce events that indicate when
+ * 1) a new file is created
+ * 2) a file has changed
+ * 3) a file has been deleted
+ *
+ * Detection if a file has been changed is done with a combination of FS last modified time
+ * and a digest of the contents of the file (a user can just save a file without updating it)
+ */
 public class WatcherTask implements Runnable {
     private static final Logger log = LoggerFactory.getLogger(WatcherTask.class);
     private static final int FILE_CHUNK_SIZE = 1024 * 1024 * 100; //100 Kb
     private static final int SLEEP_TIME_MS = 100;
 
-    private final List<String> originalPaths;
+    private final Set<String> originalPaths;
+    private final ConcurrentHashMap<File, Inspection> fileStatus;
     private Instant lastInvocation = Instant.MIN;
-    private ConcurrentHashMap<File, Inspection> fileStatus;
 
-    public WatcherTask(List<String> originalPaths) {
-        this.originalPaths = originalPaths;
+    public WatcherTask(Collection<String> originalPaths) {
+        this.originalPaths = new HashSet<>(originalPaths);
         this.fileStatus = new ConcurrentHashMap<>();
     }
 
@@ -53,9 +61,13 @@ public class WatcherTask implements Runnable {
     }
 
 
+    /**
+     * Detect if any of the files has changed by starting a virtual thread
+     * for every file in the specified {@code originalPaths} recursively descending
+     * into directories.
+     */
     private void detectChanges() {
         try (var scope = new StructuredTaskScope<Inspection>()) {
-
             for (String path : originalPaths) {
                 openPath(path, (file) -> scope.fork(() -> inspect(file)));
             }
@@ -82,6 +94,9 @@ public class WatcherTask implements Runnable {
         File filePath = Paths.get(path).toFile();
         if (filePath.isDirectory()) {
             var subPaths = filePath.listFiles();
+            if(subPaths == null)
+                return;
+
             for (File subPath : subPaths) {
                 if (subPath.isDirectory()) {
                     openPath(subPath.getAbsolutePath(), apply);
@@ -95,10 +110,17 @@ public class WatcherTask implements Runnable {
     }
 
 
+    /**
+     * Inspection of a given {@param path} for changes. The path must be an actual file.
+     * Method derives an SHA-256 digest of the file contents, reading it in chunks of size
+     * {@code FILE_CHUNK_SIZE}
+     * @param path path to an actual file
+     * @return {@link Inspection} containing the digest and a {@link File}
+     */
     private Inspection inspect(File path) {
         var file = Objects.requireNonNull(path);
         if (!file.isFile()) {
-            log.error("Not a file: {}", path);
+            log.error("Not a file: {} in inspection", path);
             throw new IllegalArgumentException(String.format("Path: %s is not a file", path));
         }
 
@@ -121,7 +143,7 @@ public class WatcherTask implements Runnable {
                 }
             }
             var inspection = new Inspection(messageDigest.digest(), file);
-            publishInspection(inspection);
+            checkFile(inspection);
             return inspection;
         } catch (FileNotFoundException | NoSuchAlgorithmException e) {
             log.error("Unable to inspect file {}", path, e);
@@ -132,7 +154,13 @@ public class WatcherTask implements Runnable {
     }
 
 
-    private void publishInspection(Inspection inspection) {
+    /**
+     * Method saves a new file, and it's digest, or determines if an already existing
+     * file should be updated by comparing the digest outputs. If a file
+     *
+     * @param inspection {@link Inspection}
+     */
+    private void checkFile(Inspection inspection) {
         var file = inspection.file;
         var alreadyPresent = this.fileStatus.putIfAbsent(file, inspection);
 
@@ -140,18 +168,30 @@ public class WatcherTask implements Runnable {
             //Only update the file status if digests do not match
             int result = Arrays.compare(alreadyPresent.digest, inspection.digest);
             if (result != 0) {
-                log.info("Updating file {}", file.getAbsoluteFile());
                 this.fileStatus.put(file, inspection);
+                publishFileUpdate(file.getAbsolutePath());
             }
         } else {
-            log.info("Adding file {}", file.getAbsoluteFile());
+            publishNewFile(file.getAbsolutePath());
         }
     }
 
-    private void publishDeletion(String path) {
-        log.info("Deleting file {}", path);
+    private void publishNewFile(String path) {
+       publishEvent(path,ChangeType.CREATE);
     }
 
+    public void publishFileUpdate(String path){
+        publishEvent(path,ChangeType.UPDATE);
+    }
+
+    private void publishDeletion(String path) {
+        publishEvent(path,ChangeType.DELETE);
+    }
+
+    private void publishEvent(String path,ChangeType changeType) {
+        DefaultFileEvent event = new DefaultFileEvent(path, changeType);
+        log.info("Publishing event {}",event);
+    }
 
     record Inspection(byte[] digest, File file) {
     }
