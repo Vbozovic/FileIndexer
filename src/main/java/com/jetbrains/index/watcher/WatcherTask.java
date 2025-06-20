@@ -32,11 +32,13 @@ public class WatcherTask implements Runnable {
     private static final int SLEEP_TIME_MS = 100;
 
     private final Set<String> originalPaths;
+    private final Consumer<FileChangeEvent> eventPublisher;
     private final ConcurrentHashMap<File, Inspection> fileStatus;
     private Instant lastInvocation = Instant.MIN;
 
-    public WatcherTask(Collection<String> originalPaths) {
+    public WatcherTask(Collection<String> originalPaths,Consumer<FileChangeEvent> eventPublisher) {
         this.originalPaths = new HashSet<>(originalPaths);
+        this.eventPublisher = eventPublisher;
         this.fileStatus = new ConcurrentHashMap<>();
     }
 
@@ -191,6 +193,7 @@ public class WatcherTask implements Runnable {
     private void publishEvent(String path,ChangeType changeType) {
         DefaultFileEvent event = new DefaultFileEvent(path, changeType);
         log.info("Publishing event {}",event);
+        eventPublisher.accept(event);
     }
 
     record Inspection(byte[] digest, File file) {

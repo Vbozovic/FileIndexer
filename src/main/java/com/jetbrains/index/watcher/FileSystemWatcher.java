@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 public class FileSystemWatcher implements AutoCloseable{
     private static final Logger log = LoggerFactory.getLogger(FileSystemWatcher.class);
@@ -13,10 +14,11 @@ public class FileSystemWatcher implements AutoCloseable{
     private final WatcherTask watcherTask;
     private Thread watcherThread;
     private final List<FSListener> listeners = new ArrayList<>();
+    private final ConcurrentLinkedDeque<FileChangeEvent> eventQueue = new ConcurrentLinkedDeque<>();
 
     public FileSystemWatcher(List<String> paths) {
         this.paths = paths;
-        this.watcherTask = new WatcherTask(paths);
+        this.watcherTask = new WatcherTask(paths,eventQueue::addFirst);
     }
 
     public void start(){
