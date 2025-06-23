@@ -5,6 +5,7 @@ import com.jetbrains.index.watcher.DefaultFileEvent;
 import com.jetbrains.index.watcher.FileChangeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -35,11 +36,11 @@ public class WatcherTask implements Runnable {
     private static final int SLEEP_TIME_MS = 100;
 
     private final Set<String> originalPaths;
-    private final MessageProducer<FileChangeEvent> eventPublisher;
+    private final Consumer<FileChangeEvent> eventPublisher;
     private final ConcurrentHashMap<File, Inspection> fileStatus;
-    private Instant lastInvocation = Instant.MIN;
+    private volatile Instant lastInvocation = Instant.MIN;
 
-    public WatcherTask(Collection<String> originalPaths, MessageProducer<FileChangeEvent> eventPublisher) {
+    public WatcherTask(Collection<String> originalPaths, Consumer<FileChangeEvent> eventPublisher) {
         this.originalPaths = new HashSet<>(originalPaths);
         this.eventPublisher = eventPublisher;
         this.fileStatus = new ConcurrentHashMap<>();
@@ -57,6 +58,8 @@ public class WatcherTask implements Runnable {
             }
             pause();
         }
+        log.info("Final paths: {}",fileStatus.keySet());
+        log.info("Original paths: {}",originalPaths);
     }
 
     /**
@@ -67,6 +70,7 @@ public class WatcherTask implements Runnable {
     private void detectDeletedFiles() throws InterruptedException {
         for (File f : fileStatus.keySet()) {
             if (!f.exists()) {
+                log.trace("Deleting file {}", f);
                 fileStatus.remove(f);
                 this.publishDeletion(f.getAbsolutePath());
             }
@@ -82,7 +86,7 @@ public class WatcherTask implements Runnable {
     private void detectChanges() {
         try (var scope = new StructuredTaskScope<Inspection>()) {
             for (String path : originalPaths) {
-                openPath(path, (file) -> scope.fork(() -> inspect(file)));
+                openPath(path, (file) -> inspect(file));
             }
 
             //wait for all tasks to execute before ending the loop
@@ -90,8 +94,10 @@ public class WatcherTask implements Runnable {
         } catch (InterruptedException e) {
             log.error("Interrupted", e);
             Thread.currentThread().interrupt();
+        }finally {
+            this.lastInvocation = Instant.now();
         }
-        this.lastInvocation = Instant.now();
+
     }
 
     private void pause() {
@@ -109,15 +115,17 @@ public class WatcherTask implements Runnable {
             var subPaths = filePath.listFiles();
             if(subPaths == null)
                 return;
-
+            log.trace("Opening directory {}",filePath);
             for (File subPath : subPaths) {
                 if (subPath.isDirectory()) {
                     openPath(subPath.getAbsolutePath(), apply);
                 } else {
+                    log.trace("Opening sub file {}",subPath);
                     apply.accept(subPath);
                 }
             }
         } else if (filePath.isFile()) {
+            log.trace("Opening file {}", filePath);
             apply.accept(filePath);
         }
     }
@@ -137,9 +145,10 @@ public class WatcherTask implements Runnable {
             throw new IllegalArgumentException(String.format("Path: %s is not a file", path));
         }
 
-        //Skip files which were not updated since last invocation
-        if (!Instant.ofEpochMilli(file.lastModified()).isAfter(lastInvocation)) {
-            log.trace("Skip file {}", path);
+
+        var existingFile = fileStatus.get(file);
+        if(existingFile != null && !Instant.ofEpochMilli(existingFile.file.lastModified()).isAfter(existingFile.lastInspection)){
+            //Skip files which were not updated since last invocation
             return null;
         }
 
@@ -155,16 +164,13 @@ public class WatcherTask implements Runnable {
                     messageDigest.update(buffer, 0, bytesRead);
                 }
             }
-            var inspection = new Inspection(messageDigest.digest(), file);
+            var inspection = new Inspection(messageDigest.digest(), file,Instant.now());
             checkFile(inspection);
             return inspection;
         } catch (FileNotFoundException | NoSuchAlgorithmException e) {
             log.error("Unable to inspect file {}", path, e);
         } catch (IOException e) {
             log.error("Error reading file chunk {}", path, e);
-        } catch (InterruptedException e) {
-            log.error("Interrupted while checking file {}",path,e);
-            Thread.currentThread().interrupt();
         }
         return null;
     }
@@ -176,7 +182,7 @@ public class WatcherTask implements Runnable {
      *
      * @param inspection {@link Inspection}
      */
-    private void checkFile(Inspection inspection) throws InterruptedException {
+    private void checkFile(Inspection inspection) {
         var file = inspection.file;
         var alreadyPresent = this.fileStatus.putIfAbsent(file, inspection);
 
@@ -184,10 +190,12 @@ public class WatcherTask implements Runnable {
             //Only update the file status if digests do not match
             int result = Arrays.compare(alreadyPresent.digest, inspection.digest);
             if (result != 0) {
+                log.info("Updating file {}",inspection.file);
                 this.fileStatus.put(file, inspection);
                 publishFileUpdate(file.getAbsolutePath());
             }
         } else {
+            log.info("Adding file {}",inspection.file);
             publishNewFile(file.getAbsolutePath());
         }
     }
@@ -196,7 +204,7 @@ public class WatcherTask implements Runnable {
      * Specialized publishing of {@link ChangeType#CREATE}
      * @param path of the created file
      */
-    private void publishNewFile(String path) throws InterruptedException {
+    private void publishNewFile(String path) {
        publishEvent(path, ChangeType.CREATE);
     }
 
@@ -204,7 +212,7 @@ public class WatcherTask implements Runnable {
      * Specialized publishing of {@link ChangeType#UPDATE}
      * @param path of the updated file
      */
-    public void publishFileUpdate(String path) throws InterruptedException {
+    public void publishFileUpdate(String path) {
         publishEvent(path,ChangeType.UPDATE);
     }
 
@@ -212,7 +220,7 @@ public class WatcherTask implements Runnable {
      * Specialized publishing of {@link ChangeType#DELETE}
      * @param path of the deleted file
      */
-    private void publishDeletion(String path) throws InterruptedException {
+    private void publishDeletion(String path) {
         publishEvent(path,ChangeType.DELETE);
     }
 
@@ -220,15 +228,14 @@ public class WatcherTask implements Runnable {
      * Generic publishing ov events
      * @param path associated file
      * @param changeType one of {@link ChangeType}
-     * @throws InterruptedException in the case of interruption while publishing the event
      */
-    private void publishEvent(String path,ChangeType changeType) throws InterruptedException {
+    private void publishEvent(String path,ChangeType changeType) {
         DefaultFileEvent event = new DefaultFileEvent(path, changeType);
         log.info("Publishing event {}",event);
-        eventPublisher.send(event);
+        eventPublisher.accept(event);
     }
 
-    record Inspection(byte[] digest, File file) {
+    record Inspection(byte[] digest, File file,Instant lastInspection) {
     }
 
 }

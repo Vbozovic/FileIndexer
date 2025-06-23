@@ -1,23 +1,18 @@
 package com.jetbrains.index.watcher;
 
-import com.jetbrains.index.watcher.task.EventPublisherTask;
 import com.jetbrains.index.watcher.task.WatcherTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class FileSystemWatcher implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(FileSystemWatcher.class);
-    private static final Long PUBLISHER_TIMEOUT = 0L;
 
     private boolean started = false;
     private final List<String> paths;
     private Thread watcherThread;
-    private Thread eventPublisher;
     private final List<FSListener> listeners = new ArrayList<>();
 
     public FileSystemWatcher(List<String> paths) {
@@ -27,16 +22,14 @@ public class FileSystemWatcher implements AutoCloseable {
     public void start() {
         startGuard("Already started");
         log.info("Starting watcher");
-        var messageBus = startEventPublisher();
-        startWatcher(messageBus);
+        startWatcher();
         this.started = true;
     }
 
     @Override
-    public void close() throws Exception {
+    public void close(){
         log.info("Closing watcher");
         watcherThread.interrupt();
-        eventPublisher.interrupt();
     }
 
     public synchronized void registerListener(FSListener listener) {
@@ -44,15 +37,13 @@ public class FileSystemWatcher implements AutoCloseable {
         listeners.add(listener);
     }
 
-    private BlockingQueue<FileChangeEvent> startEventPublisher() {
-        BlockingQueue<FileChangeEvent> eventQueue = new LinkedBlockingQueue<>();
-        eventPublisher = new Thread(new EventPublisherTask(eventQueue::take,listeners));
-        return eventQueue;
+    private void startWatcher() {
+        watcherThread = new Thread(new WatcherTask(paths, this::invokeListeners));
+        watcherThread.start();
     }
 
-    private void startWatcher(BlockingQueue<FileChangeEvent> eventQueue) {
-        watcherThread = new Thread(new WatcherTask(paths, eventQueue::put));
-        watcherThread.start();
+    private void invokeListeners(FileChangeEvent event){
+        this.listeners.forEach((l)-> l.onFileChanged(event));
     }
 
     private void startGuard(String message){
