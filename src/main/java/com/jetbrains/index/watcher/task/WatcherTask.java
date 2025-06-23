@@ -86,7 +86,7 @@ public class WatcherTask implements Runnable {
     private void detectChanges() {
         try (var scope = new StructuredTaskScope<Inspection>()) {
             for (String path : originalPaths) {
-                openPath(path, (file) -> inspect(file));
+                openPath(path, (file) -> scope.fork(()->inspect(file)));
             }
 
             //wait for all tasks to execute before ending the loop

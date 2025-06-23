@@ -6,11 +6,12 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FileSystemWatcher implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(FileSystemWatcher.class);
 
-    private boolean started = false;
+    private AtomicBoolean started = new AtomicBoolean(false);
     private final List<String> paths;
     private Thread watcherThread;
     private final List<FSListener> listeners = new ArrayList<>();
@@ -20,10 +21,10 @@ public class FileSystemWatcher implements AutoCloseable {
     }
 
     public void start() {
-        startGuard("Already started");
-        log.info("Starting watcher");
-        startWatcher();
-        this.started = true;
+        if(this.started.compareAndSet(false,true)){
+            log.info("Starting watcher");
+            startWatcher();
+        }
     }
 
     @Override
@@ -47,7 +48,7 @@ public class FileSystemWatcher implements AutoCloseable {
     }
 
     private void startGuard(String message){
-        if (started){
+        if (started.get()) {
             throw new IllegalStateException(message);
         }
     }

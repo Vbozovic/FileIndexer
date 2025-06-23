@@ -5,6 +5,7 @@ import com.jetbrains.index.watcher.ChangeType;
 import com.jetbrains.index.watcher.FSListener;
 import com.jetbrains.index.watcher.FileSystemWatcher;
 import org.awaitility.Awaitility;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -113,5 +114,15 @@ public class FileSystemWatcherTest extends BaseTest{
 
         }
     }
+
+    @Test
+    void registeringListenersAfterStartThrowsException(){
+        try (var watcher = new FileSystemWatcher(Collections.singletonList(TEST_DIRECTORY_PATH.toString()))) {
+            Assertions.assertDoesNotThrow(()->watcher.registerListener(Mockito.mock(FSListener.class)));
+            watcher.start();
+            Assertions.assertThrows(IllegalStateException.class, ()->watcher.registerListener(Mockito.mock(FSListener.class)));
+        }
+    }
+
 
 }
