@@ -2,6 +2,9 @@ package com.jetbrains.index.watcher;
 
 import java.util.Objects;
 
+/**
+ * Standard implementation of a {@link FileChangeEvent}
+ */
 public class DefaultFileEvent implements FileChangeEvent{
 
     private final String filePath;

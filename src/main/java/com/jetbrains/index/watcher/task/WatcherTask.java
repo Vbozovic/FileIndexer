@@ -1,5 +1,8 @@
-package com.jetbrains.index.watcher;
+package com.jetbrains.index.watcher.task;
 
+import com.jetbrains.index.watcher.ChangeType;
+import com.jetbrains.index.watcher.DefaultFileEvent;
+import com.jetbrains.index.watcher.FileChangeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,11 +35,11 @@ public class WatcherTask implements Runnable {
     private static final int SLEEP_TIME_MS = 100;
 
     private final Set<String> originalPaths;
-    private final Consumer<FileChangeEvent> eventPublisher;
+    private final MessageProducer<FileChangeEvent> eventPublisher;
     private final ConcurrentHashMap<File, Inspection> fileStatus;
     private Instant lastInvocation = Instant.MIN;
 
-    public WatcherTask(Collection<String> originalPaths,Consumer<FileChangeEvent> eventPublisher) {
+    public WatcherTask(Collection<String> originalPaths, MessageProducer<FileChangeEvent> eventPublisher) {
         this.originalPaths = new HashSet<>(originalPaths);
         this.eventPublisher = eventPublisher;
         this.fileStatus = new ConcurrentHashMap<>();
@@ -46,20 +49,28 @@ public class WatcherTask implements Runnable {
     public void run() {
         log.info("Started watcher task");
         while (!Thread.currentThread().isInterrupted()) {
-            detectChanges();
-            detectDeletedFiles();
+            try {
+                detectChanges();
+                detectDeletedFiles();
+            } catch (InterruptedException e) {
+                log.warn("Watcher task loop interrupted",e);
+            }
             pause();
         }
     }
 
-    private void detectDeletedFiles() {
-        fileStatus.keySet()
-                .stream()
-                .filter(f -> !f.exists())
-                .forEach(f -> {
-                    fileStatus.remove(f);
-                    this.publishDeletion(f.getAbsolutePath());
-                });
+    /**
+     * Check if any of the files which were previously encountered
+     * got deleted
+     * @throws InterruptedException if interrupted while publishing {@link ChangeType#DELETE}
+     */
+    private void detectDeletedFiles() throws InterruptedException {
+        for (File f : fileStatus.keySet()) {
+            if (!f.exists()) {
+                fileStatus.remove(f);
+                this.publishDeletion(f.getAbsolutePath());
+            }
+        }
     }
 
 
@@ -119,7 +130,7 @@ public class WatcherTask implements Runnable {
      * @param path path to an actual file
      * @return {@link Inspection} containing the digest and a {@link File}
      */
-    private Inspection inspect(File path) {
+    private Inspection inspect(File path){
         var file = Objects.requireNonNull(path);
         if (!file.isFile()) {
             log.error("Not a file: {} in inspection", path);
@@ -151,6 +162,9 @@ public class WatcherTask implements Runnable {
             log.error("Unable to inspect file {}", path, e);
         } catch (IOException e) {
             log.error("Error reading file chunk {}", path, e);
+        } catch (InterruptedException e) {
+            log.error("Interrupted while checking file {}",path,e);
+            Thread.currentThread().interrupt();
         }
         return null;
     }
@@ -162,7 +176,7 @@ public class WatcherTask implements Runnable {
      *
      * @param inspection {@link Inspection}
      */
-    private void checkFile(Inspection inspection) {
+    private void checkFile(Inspection inspection) throws InterruptedException {
         var file = inspection.file;
         var alreadyPresent = this.fileStatus.putIfAbsent(file, inspection);
 
@@ -178,22 +192,40 @@ public class WatcherTask implements Runnable {
         }
     }
 
-    private void publishNewFile(String path) {
-       publishEvent(path,ChangeType.CREATE);
+    /**
+     * Specialized publishing of {@link ChangeType#CREATE}
+     * @param path of the created file
+     */
+    private void publishNewFile(String path) throws InterruptedException {
+       publishEvent(path, ChangeType.CREATE);
     }
 
-    public void publishFileUpdate(String path){
+    /**
+     * Specialized publishing of {@link ChangeType#UPDATE}
+     * @param path of the updated file
+     */
+    public void publishFileUpdate(String path) throws InterruptedException {
         publishEvent(path,ChangeType.UPDATE);
     }
 
-    private void publishDeletion(String path) {
+    /**
+     * Specialized publishing of {@link ChangeType#DELETE}
+     * @param path of the deleted file
+     */
+    private void publishDeletion(String path) throws InterruptedException {
         publishEvent(path,ChangeType.DELETE);
     }
 
-    private void publishEvent(String path,ChangeType changeType) {
+    /**
+     * Generic publishing ov events
+     * @param path associated file
+     * @param changeType one of {@link ChangeType}
+     * @throws InterruptedException in the case of interruption while publishing the event
+     */
+    private void publishEvent(String path,ChangeType changeType) throws InterruptedException {
         DefaultFileEvent event = new DefaultFileEvent(path, changeType);
         log.info("Publishing event {}",event);
-        eventPublisher.accept(event);
+        eventPublisher.send(event);
     }
 
     record Inspection(byte[] digest, File file) {

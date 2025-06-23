@@ -1,5 +1,8 @@
-package com.jetbrains.index.watcher;
+package com.jetbrains.index.watcher.task;
 
+import com.jetbrains.index.watcher.ChangeType;
+import com.jetbrains.index.watcher.DefaultFileEvent;
+import com.jetbrains.index.watcher.FileChangeEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,9 +14,8 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.function.Consumer;
 
-public class FileSystemWatcherTest {
+public class WatcherTaskTest {
 
     private static Path TEST_DIRECTORY_PATH;
 
@@ -69,7 +71,7 @@ public class FileSystemWatcherTest {
         Thread.sleep(200);
 
         Assertions.assertEquals(3,events.size());
-        Assertions.assertTrue(events.contains(event(testFileString("test1.txt"),ChangeType.CREATE)));
+        Assertions.assertTrue(events.contains(event(testFileString("test1.txt"), ChangeType.CREATE)));
         Assertions.assertTrue(events.contains(event(testFileString("test2.txt"),ChangeType.CREATE)));
         Assertions.assertTrue(events.contains(event(testFileString("test3.txt"),ChangeType.CREATE)));
 
@@ -135,7 +137,7 @@ public class FileSystemWatcherTest {
         thread.join(Duration.ofMillis(200));
     }
 
-    private static FileChangeEvent event(String path,ChangeType type){
+    private static FileChangeEvent event(String path, ChangeType type){
         return new DefaultFileEvent(path,type);
     }
 
@@ -151,7 +153,7 @@ public class FileSystemWatcherTest {
         return testFile(fileName).toString();
     }
 
-    private static Thread oneDirectoryWatcher(Path path, Consumer<FileChangeEvent> consumer){
+    private static Thread oneDirectoryWatcher(Path path, MessageProducer<FileChangeEvent> consumer){
         var thread = new Thread(new WatcherTask(List.of(path.toString()),consumer));
         thread.setName("Watcher test trd");
         return thread;
