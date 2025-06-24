@@ -1,5 +1,6 @@
 package com.jetbrains.index.watcher.task;
 
+import com.jetbrains.index.BaseTemporaryDirectoryTest;
 import com.jetbrains.index.watcher.ChangeType;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
@@ -10,7 +11,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-public class WatcherTaskTest extends BaseTest {
+public class WatcherTaskTest extends BaseTemporaryDirectoryTest {
 
     @Test
     void watcherThreadTerminatesDuringSleep() throws InterruptedException {

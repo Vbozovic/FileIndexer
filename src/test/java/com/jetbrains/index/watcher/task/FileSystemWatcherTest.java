@@ -1,6 +1,7 @@
 package com.jetbrains.index.watcher.task;
 
 
+import com.jetbrains.index.BaseTemporaryDirectoryTest;
 import com.jetbrains.index.watcher.ChangeType;
 import com.jetbrains.index.watcher.FSListener;
 import com.jetbrains.index.watcher.FileSystemWatcher;
@@ -13,7 +14,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
 
-public class FileSystemWatcherTest extends BaseTest{
+public class FileSystemWatcherTest extends BaseTemporaryDirectoryTest {
 
     @Test
     void watcherEmitsCreatedEvent() throws InterruptedException {

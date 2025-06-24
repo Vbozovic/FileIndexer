@@ -1,8 +1,9 @@
-package com.jetbrains.index.watcher.task;
+package com.jetbrains.index;
 
 import com.jetbrains.index.watcher.ChangeType;
 import com.jetbrains.index.watcher.DefaultFileEvent;
 import com.jetbrains.index.watcher.FileChangeEvent;
+import com.jetbrains.index.watcher.task.WatcherTask;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -12,7 +13,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.function.Consumer;
 
-public abstract class BaseTest {
+public abstract class BaseTemporaryDirectoryTest {
 
     protected static Path TEST_DIRECTORY_PATH;
 
