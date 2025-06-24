@@ -17,7 +17,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -72,6 +71,7 @@ public class IndexSearchService implements StringSearch, FSListener,AutoCloseabl
 
     private void addFileToIndex(String path) {
         try {
+            log.info("Inserting into index {}",path);
             Path filePath = Paths.get(path);
             if (!Files.exists(filePath)) {
                 throw new FileNotFoundException(path);
@@ -86,16 +86,18 @@ public class IndexSearchService implements StringSearch, FSListener,AutoCloseabl
     }
 
     private void deleteFileFromIndex(String filePath) {
+        log.info("Deleting from index {}",filePath);
         index.remove(filePath);
     }
 
     private void updateFileInIndex(String filePath) {
+        log.info("Updating index {}",filePath);
         deleteFileFromIndex(filePath);
         addFileToIndex(filePath);
     }
 
     @Override
-    public void close() throws Exception {
+    public void close(){
         executor.shutdown();
     }
 }
