@@ -10,6 +10,7 @@ public interface StringSearch {
     /**
      * Returns the list with the paths to files
      * which contain the given word
+     *
      * @param word to be searched for in the index
      * @return {@link Collection} of files which contain the given word
      */

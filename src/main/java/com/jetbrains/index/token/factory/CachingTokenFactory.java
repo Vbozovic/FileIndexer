@@ -16,7 +16,8 @@ public class CachingTokenFactory implements TokenFactory {
     private static final ConcurrentHashMap<String, WeakReference<Token>> tokenMap = new ConcurrentHashMap<>();
     private static final CachingTokenFactory instance = new CachingTokenFactory();
 
-    private CachingTokenFactory() {}
+    private CachingTokenFactory() {
+    }
 
     public static CachingTokenFactory getInstance() {
         return instance;

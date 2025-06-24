@@ -25,7 +25,7 @@ import java.util.function.Consumer;
  * 1) a new file is created
  * 2) a file has changed
  * 3) a file has been deleted
- *
+ * <p>
  * Detection if a file has been changed is done with a combination of FS last modified time
  * and a digest of the contents of the file (a user can just save a file without updating it)
  */
@@ -53,17 +53,18 @@ public class WatcherTask implements Runnable {
                 detectChanges();
                 detectDeletedFiles();
             } catch (InterruptedException e) {
-                log.warn("Watcher task loop interrupted",e);
+                log.warn("Watcher task loop interrupted", e);
             }
             pause();
         }
-        log.info("Final paths: {}",fileStatus.keySet());
-        log.info("Original paths: {}",originalPaths);
+        log.info("Final paths: {}", fileStatus.keySet());
+        log.info("Original paths: {}", originalPaths);
     }
 
     /**
      * Check if any of the files which were previously encountered
      * got deleted
+     *
      * @throws InterruptedException if interrupted while publishing {@link ChangeType#DELETE}
      */
     private void detectDeletedFiles() throws InterruptedException {
@@ -85,7 +86,9 @@ public class WatcherTask implements Runnable {
     private void detectChanges() {
         try (var scope = new StructuredTaskScope<Inspection>()) {
             for (String path : originalPaths) {
-                openPath(path, (file) -> scope.fork(()->inspect(file)));
+                //Since reading files from Filesystem is IO operation
+                //Use virtual threads
+                openPath(path, (file) -> scope.fork(() -> inspect(file)));
             }
 
             //wait for all tasks to execute before ending the loop
@@ -93,7 +96,7 @@ public class WatcherTask implements Runnable {
         } catch (InterruptedException e) {
             log.error("Interrupted", e);
             Thread.currentThread().interrupt();
-        }finally {
+        } finally {
             this.lastInvocation = Instant.now();
         }
 
@@ -111,21 +114,22 @@ public class WatcherTask implements Runnable {
     /**
      * Based on the provided {@param path} either apply the {@link Consumer} to it if
      * it is an actual file or recursively iterate all sub paths of the directory
-     * @param path on the file system which resolves either to a directory or a file
+     *
+     * @param path  on the file system which resolves either to a directory or a file
      * @param apply a function which is applied to every file
      */
     private void openPath(String path, Consumer<File> apply) {
         File filePath = Paths.get(path).toFile();
         if (filePath.isDirectory()) {
             var subPaths = filePath.listFiles();
-            if(subPaths == null)
+            if (subPaths == null)
                 return;
-            log.trace("Opening directory {}",filePath);
+            log.trace("Opening directory {}", filePath);
             for (File subPath : subPaths) {
                 if (subPath.isDirectory()) {
                     openPath(subPath.getAbsolutePath(), apply);
                 } else {
-                    log.trace("Opening sub file {}",subPath);
+                    log.trace("Opening sub file {}", subPath);
                     apply.accept(subPath);
                 }
             }
@@ -140,10 +144,11 @@ public class WatcherTask implements Runnable {
      * Inspection of a given {@param path} for changes. The path must be an actual file.
      * Method derives an SHA-256 digest of the file contents, reading it in chunks of size
      * {@code FILE_CHUNK_SIZE}
+     *
      * @param path path to an actual file
      * @return {@link Inspection} containing the digest and a {@link File}
      */
-    private Inspection inspect(File path){
+    private Inspection inspect(File path) {
         var file = Objects.requireNonNull(path);
         if (!file.isFile()) {
             log.error("Not a file: {} in inspection", path);
@@ -152,7 +157,7 @@ public class WatcherTask implements Runnable {
 
 
         var existingFile = fileStatus.get(file);
-        if(existingFile != null && !Instant.ofEpochMilli(existingFile.file.lastModified()).isAfter(existingFile.lastInspection)){
+        if (existingFile != null && !Instant.ofEpochMilli(existingFile.file.lastModified()).isAfter(existingFile.lastInspection)) {
             //Skip files which were not updated since last invocation
             return null;
         }
@@ -169,7 +174,7 @@ public class WatcherTask implements Runnable {
                     messageDigest.update(buffer, 0, bytesRead);
                 }
             }
-            var inspection = new Inspection(messageDigest.digest(), file,Instant.now());
+            var inspection = new Inspection(messageDigest.digest(), file, Instant.now());
             checkFile(inspection);
             return inspection;
         } catch (FileNotFoundException | NoSuchAlgorithmException e) {
@@ -195,52 +200,56 @@ public class WatcherTask implements Runnable {
             //Only update the file status if digests do not match
             int result = Arrays.compare(alreadyPresent.digest, inspection.digest);
             if (result != 0) {
-                log.info("Updating file {}",inspection.file);
+                log.info("Updating file {}", inspection.file);
                 this.fileStatus.put(file, inspection);
                 publishFileUpdate(file.getAbsolutePath());
             }
         } else {
-            log.info("Adding file {}",inspection.file);
+            log.info("Adding file {}", inspection.file);
             publishNewFile(file.getAbsolutePath());
         }
     }
 
     /**
      * Specialized publishing of {@link ChangeType#CREATE}
+     *
      * @param path of the created file
      */
     private void publishNewFile(String path) {
-       publishEvent(path, ChangeType.CREATE);
+        publishEvent(path, ChangeType.CREATE);
     }
 
     /**
      * Specialized publishing of {@link ChangeType#UPDATE}
+     *
      * @param path of the updated file
      */
     public void publishFileUpdate(String path) {
-        publishEvent(path,ChangeType.UPDATE);
+        publishEvent(path, ChangeType.UPDATE);
     }
 
     /**
      * Specialized publishing of {@link ChangeType#DELETE}
+     *
      * @param path of the deleted file
      */
     private void publishDeletion(String path) {
-        publishEvent(path,ChangeType.DELETE);
+        publishEvent(path, ChangeType.DELETE);
     }
 
     /**
      * Generic publishing ov events
-     * @param path associated file
+     *
+     * @param path       associated file
      * @param changeType one of {@link ChangeType}
      */
-    private void publishEvent(String path,ChangeType changeType) {
+    private void publishEvent(String path, ChangeType changeType) {
         DefaultFileEvent event = new DefaultFileEvent(path, changeType);
-        log.info("Publishing event {}",event);
+        log.info("Publishing event {}", event);
         eventPublisher.accept(event);
     }
 
-    record Inspection(byte[] digest, File file,Instant lastInspection) {
+    record Inspection(byte[] digest, File file, Instant lastInspection) {
     }
 
 }

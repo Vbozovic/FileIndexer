@@ -5,7 +5,7 @@ import java.util.Objects;
 /**
  * Standard implementation of a {@link FileChangeEvent}
  */
-public class DefaultFileEvent implements FileChangeEvent{
+public class DefaultFileEvent implements FileChangeEvent {
 
     private final String filePath;
     private final ChangeType changeType;

@@ -27,7 +27,7 @@ public class FileSystemWatcher implements AutoCloseable {
     }
 
     public void start() {
-        if(this.started.compareAndSet(false,true)){
+        if (this.started.compareAndSet(false, true)) {
             log.info("Starting watcher");
             startWatcher();
         }
@@ -53,11 +53,11 @@ public class FileSystemWatcher implements AutoCloseable {
      * Forward the event to all listeners. Thee listeners them selves are responsible
      * for handling concurrency
      */
-    private void invokeListeners(FileChangeEvent event){
-        this.listeners.forEach((l)-> l.onFileChanged(event));
+    private void invokeListeners(FileChangeEvent event) {
+        this.listeners.forEach((l) -> l.onFileChanged(event));
     }
 
-    private void startGuard(String message){
+    private void startGuard(String message) {
         if (started.get()) {
             throw new IllegalStateException(message);
         }

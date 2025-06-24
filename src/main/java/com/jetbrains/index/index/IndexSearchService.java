@@ -26,7 +26,7 @@ import java.util.concurrent.Executors;
  * Acts as an orchestrator between the {@link ConcurrentIndex}, {@link com.jetbrains.index.watcher.FileSystemWatcher}
  * Also is responsible for acquiring and releasing resources.
  */
-public class IndexSearchService implements StringSearch, FSListener,AutoCloseable {
+public class IndexSearchService implements StringSearch, FSListener, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(IndexSearchService.class);
 
     private static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors();
@@ -57,21 +57,21 @@ public class IndexSearchService implements StringSearch, FSListener,AutoCloseabl
                 addFileToIndex(fileChangeEvent.filePath());
                 return null;
             }, executor);
-            case DELETE -> CompletableFuture.supplyAsync(()->{
+            case DELETE -> CompletableFuture.supplyAsync(() -> {
                 deleteFileFromIndex(fileChangeEvent.filePath());
                 return null;
-            },executor);
-            case UPDATE -> CompletableFuture.supplyAsync(()->{
+            }, executor);
+            case UPDATE -> CompletableFuture.supplyAsync(() -> {
                 updateFileInIndex(fileChangeEvent.filePath());
                 return null;
-            },executor);
+            }, executor);
             case null, default -> throw new IllegalStateException("Unexpected value: " + fileChangeEvent.change());
         }
     }
 
     private void addFileToIndex(String path) {
         try {
-            log.info("Inserting into index {}",path);
+            log.info("Inserting into index {}", path);
             Path filePath = Paths.get(path);
             if (!Files.exists(filePath)) {
                 throw new FileNotFoundException(path);
@@ -86,18 +86,18 @@ public class IndexSearchService implements StringSearch, FSListener,AutoCloseabl
     }
 
     private void deleteFileFromIndex(String filePath) {
-        log.info("Deleting from index {}",filePath);
+        log.info("Deleting from index {}", filePath);
         index.remove(filePath);
     }
 
     private void updateFileInIndex(String filePath) {
-        log.info("Updating index {}",filePath);
+        log.info("Updating index {}", filePath);
         deleteFileFromIndex(filePath);
         addFileToIndex(filePath);
     }
 
     @Override
-    public void close(){
+    public void close() {
         executor.shutdown();
     }
 }

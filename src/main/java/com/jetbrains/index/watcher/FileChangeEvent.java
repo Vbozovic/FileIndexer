@@ -6,5 +6,6 @@ package com.jetbrains.index.watcher;
  */
 public interface FileChangeEvent {
     String filePath();
+
     ChangeType change();
 }

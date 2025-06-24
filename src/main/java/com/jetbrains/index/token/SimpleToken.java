@@ -7,7 +7,7 @@ import java.util.Objects;
  * delegates everything to the {@link String} class
  * And serves as a wrapper.
  */
-public final class SimpleToken implements Token{
+public final class SimpleToken implements Token {
 
     private String value;
 

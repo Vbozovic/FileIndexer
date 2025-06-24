@@ -4,12 +4,11 @@ import com.jetbrains.index.token.Token;
 import com.jetbrains.index.token.factory.TokenFactory;
 import org.apache.commons.io.IOUtils;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.StringTokenizer;
-import java.util.stream.Collectors;
 
 /**
  * Simple tokenizer which tries to extract words from the content by

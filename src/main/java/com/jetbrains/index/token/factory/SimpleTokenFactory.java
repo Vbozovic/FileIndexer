@@ -14,7 +14,7 @@ public class SimpleTokenFactory implements TokenFactory {
 
     @Override
     public Token getToken(Object param) {
-        if(!(param instanceof String)) {
+        if (!(param instanceof String)) {
             throw new IllegalArgumentException("SimpleTokenFactory requires a string");
         }
         return new SimpleToken((String) param);

@@ -58,7 +58,7 @@ public class ConcurrentIndex<T, C> {
      */
     public Collection<C> search(T token) {
         var result = reverseIndex.get(token);
-        if(result == null) {
+        if (result == null) {
             return Collections.emptyList();
         }
         return Collections.unmodifiableCollection(result);
