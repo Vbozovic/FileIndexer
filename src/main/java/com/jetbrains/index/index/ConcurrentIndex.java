@@ -33,9 +33,10 @@ public class ConcurrentIndex<T, C> {
      * @param tokens    tokens
      * @param container owning container
      */
-    public void ingestTokens(Collection<T> tokens, C container) {
-        index.put(container, new HashSet<>(tokens));
+    public void ingestTokens(Iterable<T> tokens, C container) {
+        HashSet<T> tokenSet = new HashSet<>();
         tokens.forEach(token -> {
+            tokenSet.add(token);
             reverseIndex.compute(token, (k, v) -> {
                 var present = v;
                 if (present == null) {
@@ -46,7 +47,7 @@ public class ConcurrentIndex<T, C> {
                 return present;
             });
         });
-
+        index.put(container, tokenSet);
     }
 
     /**

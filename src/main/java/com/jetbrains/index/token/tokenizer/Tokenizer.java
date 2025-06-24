@@ -2,6 +2,7 @@ package com.jetbrains.index.token.tokenizer;
 
 import com.jetbrains.index.token.Token;
 
+import java.io.*;
 import java.util.Collection;
 
 /**
@@ -12,7 +13,8 @@ public interface Tokenizer {
     /**
      * Takes the content (from a file) and produces a {@link Collection} of tokens
      * @param content logical unit ready to be tokenized
-     * @return all the tokens parsed
+     * @return something that can be iterated over in order to collect all the tokens
      */
-    Iterable<Token> tokenize(String content);
+    Iterable<Token> tokenize(InputStreamReader content);
+
 }

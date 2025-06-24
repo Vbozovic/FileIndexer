@@ -5,7 +5,11 @@ import com.jetbrains.index.token.tokenizer.WhiteSpaceTokenizer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.stream.StreamSupport;
 
 public class WhiteSpaceTokenizerTest {
 
@@ -59,7 +63,9 @@ public class WhiteSpaceTokenizerTest {
 
     private static List<Token> tokenize(String input) {
         WhiteSpaceTokenizer whiteSpaceTokenizer = new WhiteSpaceTokenizer(new SimpleTokenFactory());
-        return whiteSpaceTokenizer.tokenize(input);
+        Iterable<Token> tokenize = whiteSpaceTokenizer.tokenize(new InputStreamReader(new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8))));
+        return StreamSupport.stream(tokenize.spliterator(), false)
+                .toList();
     }
 
 }
