@@ -30,7 +30,7 @@ public class WhiteSpaceTokenizer implements Tokenizer {
 
             List<Token> tokens = new LinkedList<>();
             //Tokenizer with punctuation,line and space characters
-            StringTokenizer tokenizer = new StringTokenizer(content, "\r\n\t,.?!\"':; ");
+            StringTokenizer tokenizer = new StringTokenizer(content, "\r\n\t,.?!\":; ");
             while (tokenizer.hasMoreTokens()) {
                 String token = tokenizer.nextToken();
                 tokens.add(tokenFactory.getToken(token));
