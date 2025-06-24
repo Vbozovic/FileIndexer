@@ -4,6 +4,7 @@ package com.jetbrains.index.watcher;
  * A listener interface which is called whenever a {@link FileChangeEvent}
  * is detected (emitted) by the underlying {@link FileSystemWatcher}
  */
+@FunctionalInterface
 public interface FSListener {
     /**
      * Implementations of this method must not do as little work as possible

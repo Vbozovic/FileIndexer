@@ -5,7 +5,6 @@ import com.jetbrains.index.watcher.DefaultFileEvent;
 import com.jetbrains.index.watcher.FileChangeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -109,6 +108,12 @@ public class WatcherTask implements Runnable {
         }
     }
 
+    /**
+     * Based on the provided {@param path} either apply the {@link Consumer} to it if
+     * it is an actual file or recursively iterate all sub paths of the directory
+     * @param path on the file system which resolves either to a directory or a file
+     * @param apply a function which is applied to every file
+     */
     private void openPath(String path, Consumer<File> apply) {
         File filePath = Paths.get(path).toFile();
         if (filePath.isDirectory()) {

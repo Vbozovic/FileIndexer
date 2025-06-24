@@ -5,18 +5,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * The File system watcher is a container of resources required for monitoring the given
+ * paths that are found on the file system. It starts and  manages the {@link WatcherTask}
+ * and forwards the file system events to registered listeners.
+ */
 public class FileSystemWatcher implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(FileSystemWatcher.class);
 
     private AtomicBoolean started = new AtomicBoolean(false);
-    private final List<String> paths;
+    private final Collection<String> paths;
     private Thread watcherThread;
     private final List<FSListener> listeners = new ArrayList<>();
 
-    public FileSystemWatcher(List<String> paths) {
+    public FileSystemWatcher(Collection<String> paths) {
         this.paths = paths;
     }
 
@@ -28,9 +34,10 @@ public class FileSystemWatcher implements AutoCloseable {
     }
 
     @Override
-    public void close(){
+    public void close() throws InterruptedException {
         log.info("Closing watcher");
         watcherThread.interrupt();
+        watcherThread.join();
     }
 
     public synchronized void registerListener(FSListener listener) {
@@ -43,6 +50,10 @@ public class FileSystemWatcher implements AutoCloseable {
         watcherThread.start();
     }
 
+    /**
+     * Forward the event to all listeners. Thee listeners them selves are responsible
+     * for handling concurrency
+     */
     private void invokeListeners(FileChangeEvent event){
         this.listeners.forEach((l)-> l.onFileChanged(event));
     }
