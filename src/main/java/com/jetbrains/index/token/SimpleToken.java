@@ -2,6 +2,11 @@ package com.jetbrains.index.token;
 
 import java.util.Objects;
 
+/**
+ * Basic implementation of a {@link Token} which
+ * delegates everything to the {@link String} class
+ * And serves as a wrapper.
+ */
 public final class SimpleToken implements Token{
 
     private String value;

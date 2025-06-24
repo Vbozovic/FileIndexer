@@ -1,6 +1,7 @@
 package com.jetbrains.index.token;
 
 import com.jetbrains.index.token.factory.SimpleTokenFactory;
+import com.jetbrains.index.token.tokenizer.WhiteSpaceTokenizer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

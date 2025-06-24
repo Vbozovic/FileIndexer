@@ -1,6 +1,6 @@
-package com.jetbrains.index.token;
+package com.jetbrains.index.token.tokenizer;
 
-import com.jetbrains.index.token.factory.CachingTokenFactory;
+import com.jetbrains.index.token.Token;
 import com.jetbrains.index.token.factory.TokenFactory;
 
 import java.util.LinkedList;
