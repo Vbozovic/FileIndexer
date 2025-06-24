@@ -1,5 +1,6 @@
 package com.jetbrains.index.token;
 
+import com.jetbrains.index.token.factory.SimpleTokenFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -56,7 +57,7 @@ public class WhiteSpaceTokenizerTest {
     }
 
     private static List<Token> tokenize(String input) {
-        WhiteSpaceTokenizer whiteSpaceTokenizer = new WhiteSpaceTokenizer();
+        WhiteSpaceTokenizer whiteSpaceTokenizer = new WhiteSpaceTokenizer(new SimpleTokenFactory());
         return whiteSpaceTokenizer.tokenize(input);
     }
 

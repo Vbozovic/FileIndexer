@@ -1,7 +1,11 @@
 package com.jetbrains.index.token;
 
+import com.jetbrains.index.token.factory.CachingTokenFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.time.Duration;
+import java.time.Instant;
 
 public class TokenCachingTest {
 
@@ -11,8 +15,8 @@ public class TokenCachingTest {
      */
     @Test
     void sameTokenObjectForSameTokenValue(){
-        var token1 = TokenFactory.getToken("Value1");
-        var token2 = TokenFactory.getToken("Value1");
+        var token1 = CachingTokenFactory.getToken("Value1");
+        var token2 = CachingTokenFactory.getToken("Value1");
         Assertions.assertNotNull(token1);
         Assertions.assertNotNull(token2);
         Assertions.assertEquals(token1, token2);
@@ -25,8 +29,8 @@ public class TokenCachingTest {
      */
     @Test
     void differentObjectForDifferentTokenValue(){
-        var token1 = TokenFactory.getToken("Value1");
-        var token2 = TokenFactory.getToken("Value2");
+        var token1 = CachingTokenFactory.getToken("Value1");
+        var token2 = CachingTokenFactory.getToken("Value2");
         Assertions.assertNotNull(token1);
         Assertions.assertNotNull(token2);
         Assertions.assertNotEquals(token1, token2);
@@ -41,16 +45,20 @@ public class TokenCachingTest {
      */
     @Test
     void removingTokenAndCausingGCCycleGivesDifferentAddress() throws InterruptedException {
-        var token = TokenFactory.getToken("Value");
+        var token = CachingTokenFactory.getToken("Value");
         Assertions.assertNotNull(token);
         int tokenAddress = System.identityHashCode(token);
         //remove reference
         token = null;
-        //Beg the Jvm to consider maybe cleaning up the heap
-        System.gc();
-        //Just in case
+
+        var start = Instant.now();
         Thread.sleep(1000);
-        token = TokenFactory.getToken("Value");
+        //Beg the Jvm to consider maybe cleaning up the heap multiple times
+        while(Duration.between(start, Instant.now()).toSeconds() < 5) {
+            System.gc();
+            Thread.sleep(100);
+        }
+        token = CachingTokenFactory.getToken("Value");
         int newAddress = System.identityHashCode(token);
         Assertions.assertNotEquals(tokenAddress, newAddress);
         Assertions.assertNotNull(token);
