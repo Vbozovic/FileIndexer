@@ -17,7 +17,7 @@ public class WhiteSpaceTokenizer implements Tokenizer {
         StringTokenizer tokenizer = new StringTokenizer(content, "\r\n\t,.?!\"':; ");
         while (tokenizer.hasMoreTokens()) {
             String token = tokenizer.nextToken();
-            tokens.add(new SimpleToken(token));
+            tokens.add(TokenFactory.getToken(token));
         }
         return tokens;
     }

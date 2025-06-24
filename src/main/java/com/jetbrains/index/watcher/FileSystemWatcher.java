@@ -34,10 +34,9 @@ public class FileSystemWatcher implements AutoCloseable {
     }
 
     @Override
-    public void close() throws InterruptedException {
+    public void close() {
         log.info("Closing watcher");
         watcherThread.interrupt();
-        watcherThread.join();
     }
 
     public synchronized void registerListener(FSListener listener) {
