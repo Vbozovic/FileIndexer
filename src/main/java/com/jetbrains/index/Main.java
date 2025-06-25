@@ -17,10 +17,18 @@ public class Main {
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
     public static void main(String[] args) throws InterruptedException {
+        if(args.length == 0) {
+            System.out.println("Usage: java Main -p<file>");
+            return;
+        }
+
         List<String> paths = new ArrayList<>();
         for (String arg : args) {
             if (arg.startsWith("-p")) {
                 paths.add(arg.substring("-p".length()));
+            }else{
+                System.out.println("Unknown option: " + arg);
+                return;
             }
         }
 
