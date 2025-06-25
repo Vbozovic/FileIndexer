@@ -2,6 +2,7 @@ package com.jetbrains.index.index;
 
 import com.jetbrains.index.BaseTemporaryDirectoryTest;
 import com.jetbrains.index.token.factory.CachingTokenFactory;
+import com.jetbrains.index.token.factory.SimpleTokenFactory;
 import com.jetbrains.index.token.tokenizer.WhiteSpaceTokenizer;
 import com.jetbrains.index.watcher.FileSystemWatcher;
 import org.awaitility.Awaitility;
@@ -28,7 +29,7 @@ public class SearchServiceTest extends BaseTemporaryDirectoryTest {
     @Test
     void indexGetsPopulated() throws Exception {
         try (var watcher = new FileSystemWatcher(List.of(TEST_DIRECTORY_PATH.toString()))) {
-            IndexSearchService svc = new IndexSearchService(new WhiteSpaceTokenizer(CachingTokenFactory.getInstance()));
+            IndexSearchService svc = testService();
             watcher.registerListener(svc);
             watcher.start();
 
@@ -56,7 +57,7 @@ public class SearchServiceTest extends BaseTemporaryDirectoryTest {
     @Test
     void singleWordInMultipleFiles() throws IOException, InterruptedException {
         try (var watcher = new FileSystemWatcher(List.of(TEST_DIRECTORY_PATH.toString()))) {
-            IndexSearchService svc = new IndexSearchService(new WhiteSpaceTokenizer(CachingTokenFactory.getInstance()));
+            IndexSearchService svc = testService();
             watcher.registerListener(svc);
             watcher.start();
 
@@ -82,7 +83,7 @@ public class SearchServiceTest extends BaseTemporaryDirectoryTest {
     @Test
     void removeFilesWhileIndexIsRunning() throws Exception {
         try (var watcher = new FileSystemWatcher(List.of(TEST_DIRECTORY_PATH.toString()))) {
-            IndexSearchService svc = new IndexSearchService(new WhiteSpaceTokenizer(CachingTokenFactory.getInstance()));
+            IndexSearchService svc = testService();
             watcher.registerListener(svc);
             watcher.start();
 
@@ -123,7 +124,7 @@ public class SearchServiceTest extends BaseTemporaryDirectoryTest {
     @Test
     void deleteFileFromIndexAndCreateOneWithSameNameButDifferentContent() throws InterruptedException, IOException {
         try (var watcher = new FileSystemWatcher(List.of(TEST_DIRECTORY_PATH.toString()))) {
-            IndexSearchService svc = new IndexSearchService(new WhiteSpaceTokenizer(CachingTokenFactory.getInstance()));
+            IndexSearchService svc = testService();
             watcher.registerListener(svc);
             watcher.start();
 
@@ -159,7 +160,7 @@ public class SearchServiceTest extends BaseTemporaryDirectoryTest {
     @Test
     void appendToEndOfTheFile() throws Exception {
         try (var watcher = new FileSystemWatcher(List.of(TEST_DIRECTORY_PATH.toString()))) {
-            IndexSearchService svc = new IndexSearchService(new WhiteSpaceTokenizer(CachingTokenFactory.getInstance()));
+            IndexSearchService svc = testService();
             watcher.registerListener(svc);
             watcher.start();
 
@@ -183,6 +184,11 @@ public class SearchServiceTest extends BaseTemporaryDirectoryTest {
 
             svc.close();
         }
+    }
+    
+    private IndexSearchService testService(){
+        var fact = new SimpleTokenFactory();
+        return new IndexSearchService(new WhiteSpaceTokenizer(fact),fact);
     }
 
 }

@@ -32,14 +32,15 @@ public class IndexSearchService implements StringSearch, FSListener, AutoCloseab
 
     private static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors();
     private final ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
-    private TokenFactory tokenFactory = new SimpleTokenFactory();
 
+    private final TokenFactory tokenFactory;
     private final Tokenizer tokenizer;
     private final ConcurrentIndex<Token, String> index;
 
 
-    public IndexSearchService(Tokenizer tokenizer) {
+    public IndexSearchService(Tokenizer tokenizer, TokenFactory tokenFactory) {
         this.tokenizer = tokenizer;
+        this.tokenFactory = tokenFactory;
         this.index = new ConcurrentIndex<>();
     }
 

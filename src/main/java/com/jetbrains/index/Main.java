@@ -25,7 +25,8 @@ public class Main {
         }
 
         try (FileSystemWatcher watcher = new FileSystemWatcher(paths)) {
-            IndexSearchService svc = new IndexSearchService(new WhiteSpaceTokenizer(CachingTokenFactory.getInstance()));
+            var fact = CachingTokenFactory.getInstance();
+            IndexSearchService svc = new IndexSearchService(new WhiteSpaceTokenizer(fact),fact);
             watcher.registerListener(svc);
             watcher.start();
 
