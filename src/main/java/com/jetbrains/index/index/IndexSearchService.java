@@ -71,7 +71,7 @@ public class IndexSearchService implements StringSearch, FSListener, AutoCloseab
 
     private void addFileToIndex(String path) {
         try {
-            log.info("Inserting into index {}", path);
+            log.trace("Inserting into index {}", path);
             Path filePath = Paths.get(path);
             if (!Files.exists(filePath)) {
                 throw new FileNotFoundException(path);
@@ -86,12 +86,12 @@ public class IndexSearchService implements StringSearch, FSListener, AutoCloseab
     }
 
     private void deleteFileFromIndex(String filePath) {
-        log.info("Deleting from index {}", filePath);
+        log.trace("Deleting from index {}", filePath);
         index.remove(filePath);
     }
 
     private void updateFileInIndex(String filePath) {
-        log.info("Updating index {}", filePath);
+        log.trace("Updating index {}", filePath);
         deleteFileFromIndex(filePath);
         addFileToIndex(filePath);
     }

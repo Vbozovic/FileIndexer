@@ -16,7 +16,7 @@ public class Main {
 
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         List<String> paths = new ArrayList<>();
         for (String arg : args) {
             if (arg.startsWith("-p")) {
@@ -31,14 +31,16 @@ public class Main {
 
             Scanner scanner = new Scanner(System.in);
             CommandMode currentMode = CommandMode.MENU;
+            Thread.sleep(1000);
             System.out.println("In menu:");
             do {
                 String line;
 
                 switch (currentMode) {
                     case MENU -> {
-                        System.out.println("Available commands: search,menu(to go back to the menu)");
+                        System.out.println("Available commands: search,menu,quit(to go back to the menu)");
                         currentMode = nextMode(scanner.next());
+
                     }
                     case QUERY -> {
                         line = scanner.next();
@@ -52,6 +54,10 @@ public class Main {
                     }
                 }
 
+                if (currentMode == CommandMode.QUIT) {
+                    System.out.println("Exiting...");
+                    break;
+                }
             } while (scanner.hasNextLine());
         }
     }
@@ -61,12 +67,13 @@ public class Main {
         return switch (line) {
             case "search" -> CommandMode.QUERY;
             case "menu" -> CommandMode.MENU;
+            case "quit" -> CommandMode.QUIT;
             case null, default -> CommandMode.NONE;
         };
     }
 
     private enum CommandMode {
-        MENU, QUERY, NONE
+        MENU, QUERY, NONE, QUIT
     }
 
 

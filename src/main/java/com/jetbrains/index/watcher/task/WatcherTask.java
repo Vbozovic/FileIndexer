@@ -245,7 +245,6 @@ public class WatcherTask implements Runnable {
      */
     private void publishEvent(String path, ChangeType changeType) {
         DefaultFileEvent event = new DefaultFileEvent(path, changeType);
-        log.info("Publishing event {}", event);
         eventPublisher.accept(event);
     }
 
