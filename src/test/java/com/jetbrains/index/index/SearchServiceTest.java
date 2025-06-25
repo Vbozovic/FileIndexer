@@ -4,6 +4,7 @@ import com.jetbrains.index.BaseTemporaryDirectoryTest;
 import com.jetbrains.index.token.factory.CachingTokenFactory;
 import com.jetbrains.index.token.tokenizer.WhiteSpaceTokenizer;
 import com.jetbrains.index.watcher.FileSystemWatcher;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -11,6 +12,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -34,14 +36,12 @@ public class SearchServiceTest extends BaseTemporaryDirectoryTest {
             Files.copy(Path.of("src/test/resources/TestFile2.txt"), testFile("TestFile2.txt"));
             Files.copy(Path.of("src/test/resources/TestFile3.txt"), testFile("TestFile3.txt"));
 
-            Thread.sleep(400);
+            Awaitility.await().atMost(Duration.ofSeconds(2)).untilAsserted(()->Assertions.assertEquals(1, svc.findWord("Hail").size()));
 
-            var hail = svc.findWord("Hail");
             var hydra = svc.findWord("Hydra");
-
-            Assertions.assertEquals(1, hail.size());
             Assertions.assertEquals(1, hydra.size());
 
+            var hail = svc.findWord("Hail");
             Assertions.assertTrue(hail.contains(testFileString("TestFile2.txt")));
             Assertions.assertTrue(hydra.contains(testFileString("TestFile2.txt")));
 
@@ -64,10 +64,10 @@ public class SearchServiceTest extends BaseTemporaryDirectoryTest {
             Files.copy(Path.of("src/test/resources/TestFile1.txt"), testFile("TestFile1.txt"));
             Files.copy(Path.of("src/test/resources/TestFile2.txt"), testFile("TestFile2.txt"));
             Files.copy(Path.of("src/test/resources/TestFile3.txt"), testFile("TestFile3.txt"));
-            Thread.sleep(400);
 
+            Awaitility.await().atMost(Duration.ofSeconds(2)).untilAsserted(() -> Assertions.assertEquals(2, svc.findWord("My").size()));
             var files = svc.findWord("My");
-            Assertions.assertEquals(2, files.size());
+
             Assertions.assertTrue(files.contains(testFileString("TestFile2.txt")));
             Assertions.assertTrue(files.contains(testFileString("TestFile3.txt")));
 
@@ -92,10 +92,10 @@ public class SearchServiceTest extends BaseTemporaryDirectoryTest {
             Thread.sleep(400);
 
             //Verify words are present in index
-            var coordinatesSouth = svc.findWord("47°9′S");
-            var coordinatesWidth = svc.findWord("126°43′W");
+            final var coordinatesSouth = svc.findWord("47°9′S");
+            final var coordinatesWidth = svc.findWord("126°43′W");
 
-            Assertions.assertEquals(1, coordinatesSouth.size());
+            Awaitility.await().atMost(Duration.ofSeconds(2)).untilAsserted(() -> Assertions.assertEquals(1, coordinatesSouth.size()));
             Assertions.assertEquals(1, coordinatesWidth.size());
 
             Assertions.assertTrue(coordinatesSouth.contains(testFileString("CthulhuPlot.txt")));
@@ -106,11 +106,11 @@ public class SearchServiceTest extends BaseTemporaryDirectoryTest {
             Thread.sleep(200);
 
             //Verify index no longer contains words
-            coordinatesSouth = svc.findWord("47°9′S");
-            coordinatesWidth = svc.findWord("126°43′W");
+            var newCoordinatesSouth = svc.findWord("47°9′S");
+            var newCoordinatesWidth = svc.findWord("126°43′W");
 
-            Assertions.assertTrue(coordinatesSouth.isEmpty());
-            Assertions.assertTrue(coordinatesWidth.isEmpty());
+            Awaitility.await().atMost(Duration.ofSeconds(2)).untilAsserted(() -> Assertions.assertTrue(newCoordinatesSouth.isEmpty()));
+            Assertions.assertTrue(newCoordinatesWidth.isEmpty());
 
             svc.close();
         }
@@ -133,18 +133,17 @@ public class SearchServiceTest extends BaseTemporaryDirectoryTest {
             Thread.sleep(400);
 
             //Verify words are present in index
-            var color = svc.findWord("greenish-black");
-            Assertions.assertEquals(1, color.size());
+            final var color = svc.findWord("greenish-black");
+            Awaitility.await().atMost(Duration.ofSeconds(2)).untilAsserted(() -> Assertions.assertEquals(1, color.size()));
 
             Assertions.assertTrue(color.contains(testFileString("CthulhuPlot.txt")));
 
             //Remove file containing words
             Files.delete(testFile("CthulhuPlot.txt"));
-            Files.writeString(testFile("CthulhuPlot.txt"),"Unicorn",StandardOpenOption.CREATE_NEW);
-            Thread.sleep(200);
+            Files.writeString(testFile("CthulhuPlot.txt"), "Unicorn", StandardOpenOption.CREATE_NEW);
 
-            color = svc.findWord("greenish-black");
-            Assertions.assertEquals(0, color.size());
+            var newColor = svc.findWord("greenish-black");
+            Awaitility.await().atMost(Duration.ofSeconds(2)).untilAsserted(() -> Assertions.assertEquals(0, newColor.size()));
 
             var corn = svc.findWord("Unicorn");
             Assertions.assertEquals(1, corn.size());
@@ -171,16 +170,16 @@ public class SearchServiceTest extends BaseTemporaryDirectoryTest {
             Thread.sleep(400);
 
             //verify string wasn't present in CthulhuPlot.txt
-            var vuk = svc.findWord("Vuk");
-            Assertions.assertTrue(vuk.isEmpty());
+            final var vuk = svc.findWord("Vuk");
+            Awaitility.await().atMost(Duration.ofSeconds(2)).untilAsserted(() -> Assertions.assertTrue(vuk.isEmpty()));
 
             //Append string to the end of the file
             Files.writeString(testFile("CthulhuPlot.txt"), "Vuk", StandardOpenOption.APPEND);
             Thread.sleep(100);
 
-            vuk = svc.findWord("Vuk");
+            var screwedVuk = svc.findWord("Vuk");
             //Oh no...
-            Assertions.assertFalse(vuk.isEmpty());
+            Assertions.assertFalse(screwedVuk.isEmpty());
 
             svc.close();
         }
