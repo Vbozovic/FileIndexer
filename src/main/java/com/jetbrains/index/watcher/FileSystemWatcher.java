@@ -50,7 +50,7 @@ public class FileSystemWatcher implements AutoCloseable {
     }
 
     /**
-     * Forward the event to all listeners. Thee listeners them selves are responsible
+     * Forward the event to all listeners. The listeners themselves are responsible
      * for handling concurrency
      */
     private void invokeListeners(FileChangeEvent event) {
