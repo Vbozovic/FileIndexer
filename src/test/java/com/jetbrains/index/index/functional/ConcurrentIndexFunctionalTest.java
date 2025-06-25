@@ -1,7 +1,7 @@
-package com.jetbrains.index.index;
+package com.jetbrains.index.index.functional;
 
+import com.jetbrains.index.index.ConcurrentIndex;
 import com.jetbrains.index.token.Token;
-import com.jetbrains.index.token.factory.SimpleTokenFactory;
 import com.jetbrains.index.token.factory.TokenFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -9,9 +9,12 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 
-public class ConcurrentIndexFunctionalTest {
-
-    private TokenFactory tokenFactory = new SimpleTokenFactory();
+/**
+ * Abstract class containing test logic irrelevant of the TokenFactory used
+ * Concrete implementation classes supply the {@link TokenFactory} which is applied in tests
+ *
+ */
+public abstract class ConcurrentIndexFunctionalTest {
 
     /**
      * Empty index must not return anything
@@ -161,9 +164,80 @@ public class ConcurrentIndexFunctionalTest {
 
     }
 
+    /**
+     * Verifies that the container only contains updated tokens
+     */
+    @Test
+    void updateIndexWithNewTokens(){
+        var tokens = List.of(token(1), token(2),token(3));
+        var index = new ConcurrentIndex<Token, String>();
+        index.ingestTokens(tokens,"/test/container1");
+
+        tokens = List.of(token(4),token(5),token(6));
+        index.update(tokens,"/test/container1");
+
+        //Verify new tokens are associated with container
+        Assertions.assertEquals(1,index.search(token(4)).size());
+        Assertions.assertEquals(1,index.search(token(5)).size());
+        Assertions.assertEquals(1,index.search(token(6)).size());
+
+        //verify old tokens are no longer associated with container
+        Assertions.assertTrue(index.search(token(1)).isEmpty());
+        Assertions.assertTrue(index.search(token(2)).isEmpty());
+        Assertions.assertTrue(index.search(token(3)).isEmpty());
+    }
+
+    /**
+     * Verifies that the container contains updated tokens
+     * which partially overlap with current tokens
+     */
+    @Test
+    void updateIndexWithOverlappingTokens(){
+        var tokens = List.of(token(1), token(2),token(3));
+        var index = new ConcurrentIndex<Token, String>();
+        index.ingestTokens(tokens,"/test/container1");
+
+        //Update with one overlapping token
+        tokens = List.of(token(3),token(4),token(5));
+        index.update(tokens,"/test/container1");
+
+        //Verify new tokens as well as common token is present
+        Assertions.assertEquals(1,index.search(token(3)).size());
+        Assertions.assertEquals(1,index.search(token(4)).size());
+        Assertions.assertEquals(1,index.search(token(5)).size());
+    }
+
+    /**
+     * Verifies that tokens associated with multiple containers
+     * Are correctly handled when updating one of those containers
+     */
+    @Test
+    void updateIndexOfMultipleContainersWithOverlappingTokens(){
+        var tokens1 = List.of(token(1), token(2),token(3));
+        var tokens2 = List.of(token(3),token(4), token(5));
+        var index = new ConcurrentIndex<Token, String>();
+        index.ingestTokens(tokens1,"/test/container1");
+        index.ingestTokens(tokens2,"/test/container2");
+
+        //Verify both containers have common token
+        var common = index.search(token(3));
+        Assertions.assertEquals(2,common.size());
+        Assertions.assertTrue(common.contains("/test/container1"));
+        Assertions.assertTrue(common.contains("/test/container2"));
+
+        //Update one of the containers removing the common token
+        var updatedTokens = List.of(token(1),token(2));
+        index.update(updatedTokens,"/test/container1");
+        //Verify updated container no longer has the formerly common token
+        Assertions.assertFalse(index.search(token(3)).contains("/test/container1"));
+
+        //Verify the other container still has the formerly common token
+        Assertions.assertEquals(1,index.search(token(3)).size());
+        Assertions.assertTrue(index.search(token(3)).contains("/test/container2"));
+    }
 
     private Token token(int param) {
-        return tokenFactory.getToken("Token" + param);
+        return getTokenFactory().getToken("Token" + param);
     }
 
     private void indexHas(ConcurrentIndex<Token,String> index, String container, Token token) {
@@ -171,5 +245,7 @@ public class ConcurrentIndexFunctionalTest {
         Assertions.assertEquals(1, result.size());
         Assertions.assertTrue(result.contains(container));
     }
+
+    protected abstract TokenFactory getTokenFactory();
 
 }

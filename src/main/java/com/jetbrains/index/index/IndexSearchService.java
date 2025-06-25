@@ -70,19 +70,9 @@ public class IndexSearchService implements StringSearch, FSListener, AutoCloseab
     }
 
     private void addFileToIndex(String path) {
-        try {
-            log.trace("Inserting into index {}", path);
-            Path filePath = Paths.get(path);
-            if (!Files.exists(filePath)) {
-                throw new FileNotFoundException(path);
-            }
-            try (var reader = new FileReader(path, StandardCharsets.UTF_8)) {
-                var tokens = tokenizer.tokenize(reader);
-                index.ingestTokens(tokens, path);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        log.trace("Inserting into index {}", path);
+        var tokens = extractTokens(path);
+        index.ingestTokens(tokens,path);
     }
 
     private void deleteFileFromIndex(String filePath) {
@@ -92,8 +82,27 @@ public class IndexSearchService implements StringSearch, FSListener, AutoCloseab
 
     private void updateFileInIndex(String filePath) {
         log.trace("Updating index {}", filePath);
-        deleteFileFromIndex(filePath);
-        addFileToIndex(filePath);
+        var updatedTokens = extractTokens(filePath);
+        index.update(updatedTokens,filePath);
+    }
+
+    /**
+     * Method extracts tokens from the given path
+     * @param path to a file
+     * @return
+     */
+    private Iterable<Token> extractTokens(String path){
+        try {
+            Path filePath = Paths.get(path);
+            if (!Files.exists(filePath)) {
+                throw new FileNotFoundException(path);
+            }
+            try (var reader = new FileReader(path, StandardCharsets.UTF_8)) {
+                return tokenizer.tokenize(reader);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

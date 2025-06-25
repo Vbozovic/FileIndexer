@@ -37,17 +37,21 @@ public class ConcurrentIndex<T, C> {
         HashSet<T> tokenSet = new HashSet<>();
         tokens.forEach(token -> {
             tokenSet.add(token);
-            reverseIndex.compute(token, (k, v) -> {
-                var present = v;
-                if (present == null) {
-                    present = reverseMapping(container);
-                    return present;
-                }
-                present.add(container);
-                return present;
-            });
+            ingestSingleToken(container, token);
         });
         index.put(container, tokenSet);
+    }
+
+    private void ingestSingleToken(C container, T token) {
+        reverseIndex.compute(token, (k, v) -> {
+            var present = v;
+            if (present == null) {
+                present = reverseMapping(container);
+                return present;
+            }
+            present.add(container);
+            return present;
+        });
     }
 
     /**
@@ -85,6 +89,39 @@ public class ConcurrentIndex<T, C> {
         });
         return tokens;
     }
+
+    /**
+     * Update method which updates the index based on the difference
+     * of existing tokens and newly supplied tokens
+     * {@param tokens} new tokens which may overlap with existing ones
+     * {@param container} container containing new tokens
+     */
+    public void update(Iterable<T> tokens, C container) {
+        index.computeIfPresent(container,(_,indexTokens)->{
+            var newTokens = new HashSet<T>();
+            for (T newToken : tokens) {
+                newTokens.add(newToken);
+                ingestSingleToken(container, newToken);
+                //indexTokens will now contain the difference
+                //between new updated tokens and existing tokens
+                indexTokens.remove(newToken);
+            }
+            for (T toRemove: indexTokens) {
+                reverseIndex.computeIfPresent(toRemove,(_,associatedFiles)->{
+                    associatedFiles.remove(container);
+                    //If no files are associated with the token remove the mapping from the reverse index
+                    if(associatedFiles.isEmpty()) {
+                        return null;
+                    }
+                    return associatedFiles;
+                });
+
+            }
+            return newTokens;
+        });
+    }
+
+
 
     /**
      * Helper method for creating a {@link Collection} used
