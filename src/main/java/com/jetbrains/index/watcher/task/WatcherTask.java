@@ -238,7 +238,7 @@ public class WatcherTask implements Runnable {
     }
 
     /**
-     * Generic publishing ov events
+     * Generic publishing of events
      *
      * @param path       associated file
      * @param changeType one of {@link ChangeType}

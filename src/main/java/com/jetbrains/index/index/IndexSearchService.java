@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -101,7 +102,8 @@ public class IndexSearchService implements StringSearch, FSListener, AutoCloseab
                 return tokenizer.tokenize(reader);
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            log.error("Error while reading file {}", path, e);
+            return Collections.emptyList();
         }
     }
 

@@ -54,7 +54,11 @@ public class FileSystemWatcher implements AutoCloseable {
      * for handling concurrency
      */
     private void invokeListeners(FileChangeEvent event) {
-        this.listeners.forEach((l) -> l.onFileChanged(event));
+        try {
+            this.listeners.forEach((l) -> l.onFileChanged(event));
+        }catch (Throwable e){
+            log.error("Error invoking listeners", e);
+        }
     }
 
     private void startGuard(String message) {

@@ -3,6 +3,8 @@ package com.jetbrains.index.token.tokenizer;
 import com.jetbrains.index.token.Token;
 import com.jetbrains.index.token.factory.TokenFactory;
 import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -15,7 +17,7 @@ import java.util.StringTokenizer;
  * Delimiting them with common characters associated with ENGLISH language
  */
 public class WhiteSpaceTokenizer implements Tokenizer {
-
+    private static final Logger log = LoggerFactory.getLogger(WhiteSpaceTokenizer.class);
     private TokenFactory tokenFactory;
 
     public WhiteSpaceTokenizer(TokenFactory tokenFactory) {
@@ -36,7 +38,8 @@ public class WhiteSpaceTokenizer implements Tokenizer {
             }
             return tokens;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            log.error("Error while tokenizing: {}",e.getMessage());
+            throw new RuntimeException("",e);
         }
 
     }
