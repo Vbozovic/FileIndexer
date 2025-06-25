@@ -23,7 +23,7 @@ public class FileSystemWatcher implements AutoCloseable {
     private final List<FSListener> listeners = new ArrayList<>();
 
     public FileSystemWatcher(Collection<String> paths) {
-        this.paths = paths;
+        this.paths = new ArrayList<>(paths);
     }
 
     public void start() {
